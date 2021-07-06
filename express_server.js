@@ -50,16 +50,12 @@ function generateRandomString() {
     'Q', 'R', 'S', 'T', 'U', 'V', 'W', 
     'X', 'Y', 'Z'
   ];
-  //defining the assignment number
-  let assNum = Math.floor(Math.random() * 62);
-
-
-  result += randoChar[assNum]
-
-
+  for (let i = 0; i < 6; i++) {
+    result += randoChar[Math.floor(Math.random() * 62)]
+  };
+  return result
 }
 
-}
 
 app.post('/urls', (req, res) => {
   console.log(req.body);
