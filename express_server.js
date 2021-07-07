@@ -61,11 +61,11 @@ app.get('/urls/:shortURL', (req, res) => {
 app.post('/urls/:id', (req, res) => {
   console.log('req.params.id', req.params.id) // this is the shortened URL
   console.log('req.body', req.body.longURL) // this is the EDITED input
-  console.log('urlDatabase', urlDatabase)
-  // const input = req.body.longURL
-  // const urlKey = req.params.id
-  // const templateVars = { 'shortURL': urlKey, 'longURL': input}
-
+  console.log('urlDatabase', urlDatabase)//why is the urlDatabase passed to here?  I should ask tomorrow. Or is it because it's already in the file??
+  const input = req.body.longURL
+  const urlKey = req.params.id
+  urlDatabase[urlKey] = input
+  res.redirect(`/urls/${urlKey}`)
 })
 
 app.get('/urls', (req, res) => {
@@ -78,7 +78,6 @@ app.get('/urls', (req, res) => {
 app.post('/urls', (req, res) => {
   const longURL = req.body.longURL; //This is how we access the actual FORM of it.  req.body would be the entire body section.
   const shortURL = generateRandomString();
-  const templateVars = { 'shortURL': shortURL, 'longURL': longURL }
   urlDatabase[shortURL] = longURL;
   res.redirect(`/urls/${shortURL}`);
 });
