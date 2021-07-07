@@ -3,10 +3,13 @@ const app = express();
 const PORT = 8080; // default port 8080
 const morgan = require("morgan")
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser")
 
 app.set("view engine", "ejs")
 
 app.use(morgan('dev'))
+
+app.use(cookieParser())
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -55,8 +58,16 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+
+app.get('/urls', (req, res) => {
+  console.log('req.cookies:', req.cookies)
+  const Youser = req.cookies.username || "Friend"
+  const templateVars = { urls: urlDatabase, username: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
+  res.render('urls_index', templateVars);
+});
+
 app.get('/urls/:shortURL', (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] }; //passing the value shortURL and longURL into the urls_show.ejs.  That's how it has access to THOSE values.
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies['username'] }; //passing the value shortURL and longURL into the urls_show.ejs.  That's how it has access to THOSE values.
   res.render("urls_show", templateVars); //the values for this might be switched from how they should be...
 });
 
@@ -72,13 +83,14 @@ app.post('/urls/:id', (req, res) => {
   }
   urlDatabase[urlKey] = input
   res.redirect(`/urls/${urlKey}`) //something is wrong here. is this recursive???
-})
-
-app.get('/urls', (req, res) => {
-  const templateVars = { urls: urlDatabase}; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
-  res.render('urls_index', templateVars);
 });
 
+app.post("/login", (req, res) => {
+  res.cookie('username', req.body.username)
+  console.log('req.body:', req.body)
+  console.log('res.body:', res.body)
+  res.send('Gotta measure my fingers')
+});
 
 
 app.post('/urls', (req, res) => {
@@ -103,12 +115,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls/`)
 });
 
-app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username)
-  console.log('req.body:', req.body)
-  console.log('res.body:', res.body) 
-  res.send('Gotta measure my fingers')
-})
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
