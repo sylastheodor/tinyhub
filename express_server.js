@@ -55,7 +55,22 @@ app.get("/urls/new", (req, res) => {
 
 app.get('/urls/:shortURL', (req, res) => {
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] }; //passing the value shortURL and longURL into the urls_show.ejs.  That's how it has access to THOSE values.
-  res.render("urls_show", templateVars);
+  res.render("urls_show", templateVars); //the values for this might be switched from how they should be...
+});
+
+app.post('/urls/:id', (req, res) => {
+  console.log('req.params.id', req.params.id) // this is the shortened URL
+  console.log('req.body', req.body.longURL) // this is the EDITED input
+  console.log('urlDatabase', urlDatabase)
+  // const input = req.body.longURL
+  // const urlKey = req.params.id
+  // const templateVars = { 'shortURL': urlKey, 'longURL': input}
+
+})
+
+app.get('/urls', (req, res) => {
+  const templateVars = { urls: urlDatabase}; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
+  res.render('urls_index', templateVars);
 });
 
 
@@ -73,10 +88,6 @@ app.get('/u/:shortURL', (req, res) => {
   res.redirect(longURL);
 });
 
-app.get('/urls', (req, res) => {
-  const templateVars = { urls: urlDatabase}; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
-  res.render('urls_index', templateVars);
-});
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
