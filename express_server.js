@@ -61,7 +61,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get('/urls', (req, res) => {
   console.log('req.cookies:', req.cookies)
-  const Youser = req.cookies.username || "Friend"
+  const Youser = req.cookies.username 
   const templateVars = { urls: urlDatabase, username: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
   res.render('urls_index', templateVars);
 });
@@ -87,9 +87,14 @@ app.post('/urls/:id', (req, res) => {
 
 app.post("/login", (req, res) => {
   res.cookie('username', req.body.username)
-  console.log('req.body:', req.body)
-  console.log('res.body:', res.body)
-  res.send('Gotta measure my fingers')
+  res.redirect(`/urls`)
+});
+
+app.post('/logout', (req, res) => {
+  console.log('req.cookies:', req.cookies)
+  res.clearCookie('username')
+  console.log('req.cookies:', req.cookies)
+  res.redirect(`/urls`)
 });
 
 
