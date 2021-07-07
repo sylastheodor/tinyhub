@@ -64,8 +64,12 @@ app.post('/urls/:id', (req, res) => {
   console.log('urlDatabase', urlDatabase)//why is the urlDatabase passed to here?  I should ask tomorrow. Or is it because it's already in the file??
   const input = req.body.longURL
   const urlKey = req.params.id
+  if(!input) {
+    res.redirect(`/urls/${urlKey}`)
+    return;
+  }
   urlDatabase[urlKey] = input
-  res.redirect(`/urls/${urlKey}`)
+  res.redirect(`/urls/${urlKey}`) //something is wrong here. is this recursive???
 })
 
 app.get('/urls', (req, res) => {
