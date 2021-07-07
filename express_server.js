@@ -35,6 +35,8 @@ const generateRandomString = () => {
   return result;
 };
 
+const userDatabase ={}
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -100,6 +102,13 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[req.params.shortURL];
   res.redirect(`/urls/`)
 });
+
+app.post("/login", (req, res) => {
+  res.cookie('username', req.body.username)
+  console.log('req.body:', req.body)
+  console.log('res.body:', res.body) 
+  res.send('Gotta measure my fingers')
+})
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
