@@ -51,6 +51,17 @@ class User {
 
 const usersDatabase ={};
 
+//will return as true if email is already present
+const emailChecker = (email) => {
+  for (let users in usersDatabase){ //iteration just returns me the key
+    console.log('users', usersDatabase[users].email) //still have to access it like this
+    if (usersDatabase[users].email === email) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -65,9 +76,19 @@ app.get("/", (req, res) => {
 app.post("/register", (req, res) => {
   let userId = `${generateRandomString()}`;
   let newUser = new User(userId, req.body.email, req.body.password);
+  console.log('newUser:', newUser.email)
+  if (newUser.email === '' || newUser.password === '') {
+    res.sendStatus(400);
+    res.send('<div class="danger"><p><strong>Yo!</strong> Please fill out both fields...</p></div>'); //make this a pop up window
+    return;
+  }
+  if(emailChecker(newUser.email)){
+    res.sendStatus(400);
+
+  } 
   usersDatabase[userId] = newUser.getUser();
   res.cookie('user_id', usersDatabase[userId]);
-  console.log('usersDatabse:', usersDatabase)
+  console.log('usersDatabase:', usersDatabase)
   res.redirect('/urls');
 });
 
@@ -117,7 +138,7 @@ app.post("/login", (req, res) => {
 
 app.post('/logout', (req, res) => {
   console.log('req.cookies:', req.cookies)
-  res.clearCookie('username')
+  res.clearCookie('user_id')
   console.log('req.cookies:', req.cookies)
   res.redirect(`/urls`)
 });

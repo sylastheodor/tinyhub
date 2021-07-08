@@ -12,18 +12,23 @@
     >
       <span class="navbar-toggler-icon"></span>
     </button>
-    <% if(user.email) {%>
+    <% if(user) { %> 
+      <!-- if accessing a property off of an undefined object it will throw an error -->
+      <!-- is user.email and user is undefined error.  BUT if(user) and user is undefined that'll be false -->
       <h3>Logged in as: <%= user.email %></h3>
       <form method="POST" action="/logout">
         <button type="submit" class="btn-primary">LOGOUT</button>
       </form>
       <% } else { %>
-      <form method="POST" action="/login">
+      <form method="GET" action="/login">
       <input type="text" id="username" name="username" /><br />
       <input type="text" id="password" name="password" /><br />
       <button type="submit" class="btn btn-primary">LOGIN</button>
+      </form>
+      <form method="POST" action="/register">
+        <button type="submit" class="btn btn-primary">REGISTER</button>
+      </form>
       <% } %>
-    </form>
 
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
       <div class="navbar-nav">
