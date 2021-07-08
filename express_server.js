@@ -38,7 +38,19 @@ const generateRandomString = () => {
   return result;
 };
 
-const userDatabase ={}
+class User {
+  constructor(id, email, password){
+    this.id = id;
+    this.email = email;
+    this.password = password;
+  };
+  getUser() {
+    return {'id': this.id, 'email': this.email, 'password': this.password};
+  }
+};
+
+const usersDatabase ={};
+
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -47,6 +59,16 @@ const urlDatabase = {
 
 app.get("/", (req, res) => {
   res.send("Hello!");
+});
+
+
+app.post("/register", (req, res) => {
+  let userId = `${generateRandomString()}`;
+  let newUser = new User(userId, req.body.email, req.body.password);
+  usersDatabase[userId] = newUser.getUser();
+  res.cookie('user_id', usersDatabase[userId]);
+  console.log('usersDatabse:', usersDatabase)
+  res.redirect('/urls');
 });
 
 app.get("/hello", (req, res) => {
@@ -58,16 +80,19 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+app.get("/register", (req, res) => {
+  res.render("register")
+})
+
 
 app.get('/urls', (req, res) => {
-  console.log('req.cookies:', req.cookies)
-  const Youser = req.cookies.username 
-  const templateVars = { urls: urlDatabase, username: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
+  const Youser = req.cookies.user_id 
+  const templateVars = { urls: urlDatabase, user: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
   res.render('urls_index', templateVars);
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies['username'] }; //passing the value shortURL and longURL into the urls_show.ejs.  That's how it has access to THOSE values.
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: req.cookies['user_id'] }; //passing the value shortURL and longURL into the urls_show.ejs.  That's how it has access to THOSE values.
   res.render("urls_show", templateVars); //the values for this might be switched from how they should be...
 });
 

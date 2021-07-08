@@ -12,8 +12,8 @@
     >
       <span class="navbar-toggler-icon"></span>
     </button>
-    <% if(username) {%>
-      <h3>Logged in as: <%= username %></h3>
+    <% if(user.email) {%>
+      <h3>Logged in as: <%= user.email %></h3>
       <form method="POST" action="/logout">
         <button type="submit" class="btn-primary">LOGOUT</button>
       </form>
