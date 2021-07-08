@@ -53,13 +53,30 @@ const usersDatabase ={};
 
 //will return as true if email is already present
 const emailChecker = (email) => {
-  for (let users in usersDatabase){ //iteration just returns me the key
-    console.log('users', usersDatabase[users].email) //still have to access it like this
+  for (let users in usersDatabase){ //iteration just returns me the key THIS WORKED EARLIER
+    console.log('email:', email);
+    console.log('users', usersDatabase[users].email, " typeOf users.email:", typeof usersDatabase[users].email); //still have to access it like this
     if (usersDatabase[users].email === email) {
       return true;
-    } else {
-      return false;
     }
+  }
+  return false;
+};
+
+const pwChecker = (pw) => {
+  for (let users in usersDatabase){ //iteration just returns me the key
+    if (usersDatabase[users].password === pw) {
+      return true;
+    } 
+  }
+};
+
+const findByEmail = (email) => {
+  for (let users in usersDatabase){ //iteration just returns me the key
+    console.log('users:', usersDatabase[users]) //still have to access it like this
+    if (usersDatabase[users].email === email) {
+      return usersDatabase[users]; //I could probably just make this the emailChecker function, no? It's late at night check tomorrow morning
+    } 
   }
 };
 
@@ -68,28 +85,54 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.send("Hello!");
+app.post("/login", (req, res) => {
+  console.log('req.body.email:', req.body.email)
+  let email = req.body.email
+  if (!emailChecker(email)) {
+    res.sendStatus(403);
+    console.log('email wrong')
+    return;
+  }
+  if (!pwChecker(req.body.password)) {
+    res.sendStatus(403);
+    console.log('password wrong')
+    return;
+  } else {
+  res.cookie('user_id', findByEmail(req.body.email));
+  res.redirect(`/urls`);
+  }
 });
+
+app.get("/login", (req, res) => {
+  const templateVars = { user: req.cookies['user_id']}
+  res.render(`login_page`, templateVars);
+});
+
 
 
 app.post("/register", (req, res) => {
   let userId = `${generateRandomString()}`;
   let newUser = new User(userId, req.body.email, req.body.password);
-  console.log('newUser:', newUser.email)
+  console.log('newUser:', newUser)
   if (newUser.email === '' || newUser.password === '') {
     res.sendStatus(400);
     res.send('<div class="danger"><p><strong>Yo!</strong> Please fill out both fields...</p></div>'); //make this a pop up window
     return;
   }
-  if(emailChecker(newUser.email)){
+  if(emailChecker(req.body.email)){ //lol why does this work?  Couldn't newUser.email work?  Look into this if you can.
     res.sendStatus(400);
-
+    return;
+    //pop up to come
   } 
   usersDatabase[userId] = newUser.getUser();
   res.cookie('user_id', usersDatabase[userId]);
+  console.log()
   console.log('usersDatabase:', usersDatabase)
   res.redirect('/urls');
+}); //needs polish
+
+app.get("/", (req, res) => {
+  res.send("Hello!");
 });
 
 app.get("/hello", (req, res) => {
@@ -128,18 +171,14 @@ app.post('/urls/:id', (req, res) => {
     return;
   }
   urlDatabase[urlKey] = input
-  res.redirect(`/urls/${urlKey}`) //something is wrong here. is this recursive???
+  res.redirect(`/urls/${urlKey}`) 
 });
 
-app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username)
-  res.redirect(`/urls`)
-});
 
 app.post('/logout', (req, res) => {
   console.log('req.cookies:', req.cookies)
   res.clearCookie('user_id')
-  console.log('req.cookies:', req.cookies)
+  console.log('usersDatabase:', usersDatabase)
   res.redirect(`/urls`)
 });
 
