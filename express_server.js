@@ -3,15 +3,17 @@ const app = express();
 const PORT = 8080; // default port 8080
 const morgan = require("morgan")
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser")
+// const cookieParser = require("cookie-parser")
+const cookieSession = require("cookie-session")
 const bcrypt = require('bcryptjs')
 
-app.set("view engine", "ejs")
-
-app.use(morgan('dev'))
-
-app.use(cookieParser())
-
+app.set("view engine", "ejs");
+app.use(morgan('dev'));
+app.use(cookieSession({
+  name: 'user',
+  keys: ['key1', 'key2']
+}));
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 
 const generateRandomString = () => {
@@ -21,7 +23,7 @@ const generateRandomString = () => {
   my own method first.  */
   // like idk it's way too many lines of code but I could make it less readable and just reduce the array to one string make it not so bad?
   //That's probably not the move
-  let result = ''
+  let result = '';
   const randoChar = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 
@@ -63,14 +65,6 @@ const emailChecker = (email) => {
   }
 };
 
-const pwChecker = (pw) => {
-  for (let users in usersDatabase){ //iteration just returns me the key
-    if (usersDatabase[users].password === pw) {
-      return true;
-    } 
-  }
-};
-
 const findByEmail = (email) => {
   for (let users in usersDatabase){ //iteration just returns me the key
     console.log('users:', usersDatabase[users]) //still have to access it like this
@@ -82,6 +76,7 @@ const findByEmail = (email) => {
 
 const urlDatabase = {};
 
+//creates an object of urls related to the logged in user
 const urlsForUser = (id) => {
   result = {}
   for(let url in urlDatabase){
@@ -93,7 +88,7 @@ const urlsForUser = (id) => {
 }
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const validUrls = urlsForUser(req.cookies.user_id)
+  const validUrls = urlsForUser(req.session.user_id)
   for(urls in validUrls){
     if (req.params.shortURL === url) {
       delete urlDatabase[req.params.shortURL];
@@ -122,8 +117,8 @@ app.post("/register", (req, res) => {
     //pop up to come
   } 
   usersDatabase[userId] = newUser.getUser();
-  res.cookie('user_id', usersDatabase[userId]);
-  console.log('usersDatabase:', usersDatabase)
+  req.session.user_id = usersDatabase[userId];
+  console.log('usersDatabase:', usersDatabase);
   res.redirect('/urls');
 }); //needs polish
 
@@ -142,13 +137,13 @@ app.post("/login", (req, res) => {
     console.log('password wrong')
     return;
   } else {
-  res.cookie('user_id', findByEmail(req.body.email));
+  req.session.user_id = findByEmail(req.body.email);
   res.redirect(`/urls`);
   }
 });
 
 app.get("/login", (req, res) => {
-  const templateVars = { user: req.cookies['user_id']};
+  const templateVars = { user: req.session['user_id']};
   res.render(`login_page`, templateVars);
 });
 
@@ -163,7 +158,7 @@ app.get("/hello", (req, res) => {
 
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = {user: req.cookies.user_id};
+  const templateVars = {user: req.session.user_id};
   res.render("urls_new", templateVars);
 });
 
@@ -174,13 +169,13 @@ app.get("/register", (req, res) => {
 
 
 app.get('/urls', (req, res) => { 
-  const Youser = req.cookies.user_id 
-  if(!req.cookies.user_id) {
+  const Youser = req.session.user_id 
+  if(!req.session.user_id) {
     const templateVars = { urls: null, user: null }; 
     res.render('urls_index', templateVars);
     return;
   } else {
-  const templateVars = { urls: urlsForUser(req.cookies.user_id.id), user: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
+  const templateVars = { urls: urlsForUser(req.session.user_id.id), user: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
   res.render('urls_index', templateVars);
   }
 });
@@ -191,16 +186,16 @@ app.get('/urls/:shortURL', (req, res) => {
   //SO, if req.param.shortURL !== one of those URLS, we need to redirect, perhaps send a 403 or a 401
   //
 
-  const validUrl = urlsForUser(req.cookies.user_id.id)
+  const validUrl = urlsForUser(req.session.user_id.id)
   console.log('validUrl:', validUrl)
-  if(!req.cookies.user_id) {
+  if(!req.session.user_id) {
     const templateVars = { shortURL: null, longURL: null, user: null }; 
     res.render('urls_show', templateVars);
     return;
   }
   for(let url in validUrl) {
     if(url === req.params.shortURL) {
-      const templateVars = { shortURL: req.params.shortURL, longURL: validUrl[req.params.shortURL], user: req.cookies['user_id'] }; 
+      const templateVars = { shortURL: req.params.shortURL, longURL: validUrl[req.params.shortURL], user: req.session['user_id'] }; 
       res.render('urls_show', templateVars); 
       return;
     }
@@ -214,7 +209,7 @@ app.post('/urls/:id', (req, res) => {
   console.log('req.body', req.body.longURL) // this is the EDITED input
   console.log('urlDatabase', urlDatabase)//why is the urlDatabase passed to here?  I should ask tomorrow. Or is it because it's already in the file??
   
-  if (!req.cookies.user_id){
+  if (!req.session.user_id){
     res.redirect(`'/login`);
     return;
   }  
@@ -224,7 +219,7 @@ app.post('/urls/:id', (req, res) => {
     res.redirect(`/urls/${urlKey}`);
     return;
   }
-  const validUrls = urlsForUser(req.cookies.user_id)
+  const validUrls = urlsForUser(req.session.user_id)
   for(urls in validUrls){
     if (!req.params.id === url) {
       res.send(405);
@@ -239,26 +234,24 @@ app.post('/urls/:id', (req, res) => {
 
 
 app.post('/logout', (req, res) => {
-  console.log('req.cookies:', req.cookies)
-  res.clearCookie('user_id')
+  req.session = null;
   console.log('usersDatabase:', usersDatabase)
-  res.redirect(`/urls`)
+  res.redirect(`/urls`);
 });
 
 
 app.post('/urls', (req, res) => {
   const longURL = req.body.longURL; //This is how we access the actual FORM of it.  req.body would be the entire body section.
   const shortURL = generateRandomString();
-  console.log('req.cookies.user_id:', req.cookies.user_id.id)
   console.log('urldatabase before:', urlDatabase)
   urlDatabase[shortURL] = {}; 
   urlDatabase[shortURL]['longURL'] = longURL;
-  urlDatabase[shortURL]['userId'] =  req.cookies.user_id.id
+  urlDatabase[shortURL]['userId'] =  req.session.user_id.id
   console.log('urldatabase after:', urlDatabase)
   res.redirect(`/urls/${shortURL}`);
 });
 
-//This only works with full http://www.websitesFormattedLikeThis.com
+
 app.get('/u/:shortURL', (req, res) => {
   let longURL = urlDatabase[req.params.shortURL]['longURL'];
   if (!longURL.startsWith('http')) {
