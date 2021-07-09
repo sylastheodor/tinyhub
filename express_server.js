@@ -13,33 +13,15 @@ app.use(cookieSession({
   name: 'user',
   keys: ['key1', 'key2']
 }));
-app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 
-const generateRandomString = () => {
-  /* so I could do a bunch of equations with a String.FromCharCode, but then I'd have to make a couple if statements to avoid the punctuation characters
-  What I'm gonna do instead, is make a very long array of all the characters, and then return a random number from 0-61 corresponding to a character in the array
-  Maybe this will get refactored out but it's just a beta baby we're just getting started.  I found a pretty dece method on stackoverflow but I'm gonna do
-  my own method first.  */
-  // like idk it's way too many lines of code but I could make it less readable and just reduce the array to one string make it not so bad?
-  //That's probably not the move
-  let result = '';
-  const randoChar = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 
-    'h', 'i', 'j', 'k', 'l', 'm', 'n', 
-    'o', 'p', 'q', 'r', 's', 't', 'u', 
-    'v', 'w', 'x', 'y', 'z', 'A', 'B', 
-    'C', 'D', 'E', 'F', 'G', 'H', 'I', 
-    'J', 'K', 'L', 'M', 'N', 'O', 'P', 
-    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 
-    'X', 'Y', 'Z'
-  ];
-  for (let i = 0; i < 6; i++) {
-    result += randoChar[Math.floor(Math.random() * 62)];
-  };
-  return result;
-};
+const {generateRandomString} = require('./helpers')
+const {findByEmail} = require ('./helpers')
+const {urlsForUser} = require ('./helpers')
+
+const urlDatabase = {};
+const usersDatabase = {};
+
 
 class User {
   constructor(id, email, password){
@@ -52,50 +34,14 @@ class User {
   }
 };
 
-const usersDatabase ={};
-
-//will return as true if email is already present
-const emailChecker = (email) => {
-  for (let users in usersDatabase){ //iteration just returns me the key THIS WORKED EARLIER
-    console.log('email:', email);
-    console.log('users', usersDatabase[users].email, " typeOf users.email:", typeof usersDatabase[users].email); //still have to access it like this
-    if (usersDatabase[users].email === email) {
-      return true;
-    }
-  }
-};
-
-const findByEmail = (email) => {
-  for (let users in usersDatabase){ //iteration just returns me the key
-    console.log('users:', usersDatabase[users]) //still have to access it like this
-    if (usersDatabase[users].email === email) {
-      return usersDatabase[users]; //I could probably just make this the emailChecker function, no? It's late at night check tomorrow morning
-    } 
-  }
-};
-
-const urlDatabase = {};
-
-//creates an object of urls related to the logged in user
-const urlsForUser = (id) => {
-  result = {}
-  for(let url in urlDatabase){
-    if(id === urlDatabase[url].userId){
-      result[url] = urlDatabase[url]['longURL']
-    }
-  }
-  return result
-}
-
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const validUrls = urlsForUser(req.session.user_id)
+  const validUrls = urlsForUser(req.session.user_id.id, urlDatabase);
   for(urls in validUrls){
-    if (req.params.shortURL === url) {
+    if (req.params.shortURL === urls) {
       delete urlDatabase[req.params.shortURL];
-      res.redirect(`/urls/`)
+      res.redirect(`/urls/`);
     }
   }
-  console.log("not deleted")
   res.send(405)
   res.redirect(`/urls/`)
 });
@@ -103,15 +49,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/register", (req, res) => {
   if (req.body.email === '' || req.body.password === '') {
     res.sendStatus(400);
-    res.send('<div class="danger"><p><strong>Yo!</strong> Please fill out both fields...</p></div>'); //make this a pop up window
-    res.redirect('/login')
+    res.send(`<script>alert ("Yo! Please fill out both fields...")</script>`);
+    res.redirect('/login');
     return;
   }
   let userId = `${generateRandomString()}`;
   const pass = bcrypt.hashSync(req.body.password, 10)
   let newUser = new User(userId, req.body.email, pass);
   console.log('newUser:', newUser)
-  if(emailChecker(req.body.email)){ 
+  if(findByEmail(req.body.email, usersDatabase)){ 
     res.sendStatus(400);
     return;
     //pop up to come
@@ -120,24 +66,25 @@ app.post("/register", (req, res) => {
   req.session.user_id = usersDatabase[userId];
   console.log('usersDatabase:', usersDatabase);
   res.redirect('/urls');
-}); //needs polish
+}); 
 
 app.post("/login", (req, res) => {
   console.log('req.body.email:', req.body.email)
   let email = req.body.email
-  if (!emailChecker(email)) {
-    res.sendStatus(403);
+  if (!findByEmail(email, usersDatabase)) {
+    res.status(401).send(`<script>alert ("That email isn't in our database!")</script>`)
+    res.redirect('/urls')
     console.log('email wrong')
     return;
   }
-  let id = findByEmail(req.body.email)
+  let id = findByEmail(req.body.email, usersDatabase)
   console.log('var id:', id)
   if (!bcrypt.compareSync(req.body.password, id.password)) {
-    res.status(401).resredirect('/urls');
-    console.log('password wrong')
+    res.status(401).send(`<script>alert ("Wrong password!")</script>`)
+    console.log('password wrong');
     return;
   } else {
-  req.session.user_id = findByEmail(req.body.email);
+  req.session.user_id = findByEmail(req.body.email, usersDatabase);
   res.redirect(`/urls`);
   }
 });
@@ -149,7 +96,11 @@ app.get("/login", (req, res) => {
 
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  if(!req.session.user_id){
+    res.redirect("/login");
+    return;
+  }
+  res.redirect("/urls");
 });
 
 app.get("/hello", (req, res) => {
@@ -175,7 +126,7 @@ app.get('/urls', (req, res) => {
     res.render('urls_index', templateVars);
     return;
   } else {
-  const templateVars = { urls: urlsForUser(req.session.user_id.id), user: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
+  const templateVars = { urls: urlsForUser(req.session.user_id.id, urlDatabase), user: Youser }; //passing urlDatabase as "urls" so that the urls_index.ejs can access it as such
   res.render('urls_index', templateVars);
   }
 });
@@ -186,7 +137,7 @@ app.get('/urls/:shortURL', (req, res) => {
   //SO, if req.param.shortURL !== one of those URLS, we need to redirect, perhaps send a 403 or a 401
   //
 
-  const validUrl = urlsForUser(req.session.user_id.id)
+  const validUrl = urlsForUser(req.session.user_id.id, urlDatabase)
   console.log('validUrl:', validUrl)
   if(!req.session.user_id) {
     const templateVars = { shortURL: null, longURL: null, user: null }; 
@@ -219,7 +170,7 @@ app.post('/urls/:id', (req, res) => {
     res.redirect(`/urls/${urlKey}`);
     return;
   }
-  const validUrls = urlsForUser(req.session.user_id)
+  const validUrls = urlsForUser(req.session.user_id, urlDatabase)
   for(urls in validUrls){
     if (!req.params.id === url) {
       res.send(405);
@@ -264,8 +215,6 @@ app.get('/u/:shortURL', (req, res) => {
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
-
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
