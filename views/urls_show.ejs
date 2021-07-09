@@ -5,6 +5,16 @@
 </head>
 
 <body>
+  <% if (!user) { %> 
+    <main style='margin: 1em;'>
+      <h3>Sorry Pal</h3><br>
+      <h2>This is for <b>Members only</b></h2><br>
+      <h2>Log in if you haven't</h2>
+      <form method="GET" action="/login">
+        <button type="submit" class="btn btn-primary">LOG ME IN</button>
+        </form>
+    </main>
+    <% } %>
   <%- include('partials/_header') %>
   <div class="card text-center">
     <div class="card-header"></div>
