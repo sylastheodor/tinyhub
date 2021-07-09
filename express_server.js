@@ -4,6 +4,7 @@ const PORT = 8080; // default port 8080
 const morgan = require("morgan")
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser")
+const bcrypt = require('bcryptjs')
 
 app.set("view engine", "ejs")
 
@@ -79,16 +80,7 @@ const findByEmail = (email) => {
   }
 };
 
-const urlDatabase = {
-  b2xVn2: {
-    longURL: "http://www.lighthouselabs.ca",
-    userId: "default" 
-  },
-  '9sm5xK': {
-    longURL: "http://www.google.com",
-    userId: "default"
-  } 
-};
+const urlDatabase = {};
 
 const urlsForUser = (id) => {
   result = {}
@@ -113,6 +105,27 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls/`)
 });
 
+app.post("/register", (req, res) => {
+  if (req.body.email === '' || req.body.password === '') {
+    res.sendStatus(400);
+    res.send('<div class="danger"><p><strong>Yo!</strong> Please fill out both fields...</p></div>'); //make this a pop up window
+    res.redirect('/login')
+    return;
+  }
+  let userId = `${generateRandomString()}`;
+  const pass = bcrypt.hashSync(req.body.password, 10)
+  let newUser = new User(userId, req.body.email, pass);
+  console.log('newUser:', newUser)
+  if(emailChecker(req.body.email)){ 
+    res.sendStatus(400);
+    return;
+    //pop up to come
+  } 
+  usersDatabase[userId] = newUser.getUser();
+  res.cookie('user_id', usersDatabase[userId]);
+  console.log('usersDatabase:', usersDatabase)
+  res.redirect('/urls');
+}); //needs polish
 
 app.post("/login", (req, res) => {
   console.log('req.body.email:', req.body.email)
@@ -122,8 +135,10 @@ app.post("/login", (req, res) => {
     console.log('email wrong')
     return;
   }
-  if (!pwChecker(req.body.password)) {
-    res.sendStatus(403);
+  let id = findByEmail(req.body.email)
+  console.log('var id:', id)
+  if (!bcrypt.compareSync(req.body.password, id.password)) {
+    res.status(401).resredirect('/urls');
     console.log('password wrong')
     return;
   } else {
@@ -133,30 +148,10 @@ app.post("/login", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const templateVars = { user: req.cookies['user_id']}
+  const templateVars = { user: req.cookies['user_id']};
   res.render(`login_page`, templateVars);
 });
 
-app.post("/register", (req, res) => {
-  let userId = `${generateRandomString()}`;
-  let newUser = new User(userId, req.body.email, req.body.password);
-  console.log('newUser:', newUser)
-  if (newUser.email === '' || newUser.password === '') {
-    res.sendStatus(400);
-    res.send('<div class="danger"><p><strong>Yo!</strong> Please fill out both fields...</p></div>'); //make this a pop up window
-    return;
-  }
-  if(emailChecker(req.body.email)){ //lol why does this work?  Couldn't newUser.email work?  Look into this if you can.
-    res.sendStatus(400);
-    return;
-    //pop up to come
-  } 
-  usersDatabase[userId] = newUser.getUser();
-  res.cookie('user_id', usersDatabase[userId]);
-  console.log()
-  console.log('usersDatabase:', usersDatabase)
-  res.redirect('/urls');
-}); //needs polish
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -180,7 +175,6 @@ app.get("/register", (req, res) => {
 
 app.get('/urls', (req, res) => { 
   const Youser = req.cookies.user_id 
-  console.log('Youser:', Youser)
   if(!req.cookies.user_id) {
     const templateVars = { urls: null, user: null }; 
     res.render('urls_index', templateVars);
